@@ -31,10 +31,12 @@ class corediff_benchexec extends pts_module_interface
 	const module_version = '0.1.0';
 	const module_description = 'Setting COREDIFF_BENCHEXEC will auto-load and enable this Phoronix Test Suite module. The module also depends upon running a modern Linux kernel (supporting perf) and that the perf binary is available via standard system paths.';
 	const module_author = 'Luis Gerhorst';
+
+    private static $burst_index;
     
 	public static function module_environmental_variables()
 	{
-		return array('COREDIFF_BENCHEXEC', 'COREDIFF_BENCHEXEC_EXEC_BINARY_PREPEND');
+		return array('COREDIFF_BENCHEXEC', 'COREDIFF_BENCHEXEC_MONITOR', 'COREDIFF_BENCHEXEC_LOG');
 	}
 
 	public static function module_info()
@@ -57,14 +59,19 @@ class corediff_benchexec extends pts_module_interface
 
 	public static function __pre_test_run(&$test_run_request)
 	{
-        $test_run_request->exec_binary_prepend = getenv('COREDIFF_BENCHEXEC_EXEC_BINARY_PREPEND') . ' ';
+        self::$burst_index = 0;
+        exec('echo -n ' . self::$burst_index . ' > ' . getenv('COREDIFF_BENCHEXEC_LOG') . 'current_burst_index');
+        $test_run_request->exec_binary_prepend = getenv('COREDIFF_BENCHEXEC_MONITOR') . ' ' . getenv('COREDIFF_BENCHEXEC_LOG') . ' ';
 
         echo PHP_EOL . '$test_run_request->exec_binary_prepend = ' . $test_run_request->exec_binary_prepend . PHP_EOL;
 	}
 
-	public static function __interim_test_run()
+	public static function __interim_test_run(&$test_run_request)
 	{
-		echo PHP_EOL . 'This test is being run multiple times for accuracy. Anything to do between tests?' . PHP_EOL . 'Called: __interim_test_run()' . PHP_EOL;
+        self::$burst_index = self::$burst_index + 1;
+        exec('echo -n ' . self::$burst_index . ' > ' . getenv('COREDIFF_BENCHEXEC_LOG') . 'current_burst_index');
+
+        echo PHP_EOL . '$test_run_request->exec_binary_prepend = ' . $test_run_request->exec_binary_prepend . PHP_EOL;
 	}
 
 	public static function __post_test_run()
